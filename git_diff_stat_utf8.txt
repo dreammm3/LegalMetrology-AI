@@ -1,0 +1,11 @@
+﻿ .gitignore                       |   16 +-
+ README.md                        |  226 +++++--
+ backend/main.py                  |   27 +
+ backend/services/declarations.py |    2 +-
+ backend/storage/sessions.json    |  702 ---------------------
+ docs/architecture.md             |    4 +-
+ frontend/assets/app.js           |  416 ++++++-------
+ frontend/assets/style.css        | 1053 ++++++++++++++++++--------------
+ frontend/capture.html            | 1246 +++++++++++++++++++++++++++++++++++---
+ frontend/dashboard.html          |  280 +++++----
+ 10 files changed, 2281 insertions(+), 1691 deletions(-)

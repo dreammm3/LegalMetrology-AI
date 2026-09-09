@@ -29,17 +29,21 @@ wheels/
 .coverage
 htmlcov/
 
+# Uploads & Temp Data
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Runtime session data
+backend/storage/sessions.json
+
 # Environment Variables
 .env
-.env.local
+.env.*
+!.env.example
 
 # IDE & OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-
-# Uploads & Temp Data
-data/uploads/
-data/sessions/
-data/cache/
+*.log

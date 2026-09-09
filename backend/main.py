@@ -4,9 +4,11 @@ Run:
     uvicorn main:app --reload --port 8000
 """
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from models.schemas import SessionCreateRequest
 from services import quality, ocr, declarations, coverage as coverage_service
@@ -21,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 
 @app.post("/session")
@@ -49,6 +54,13 @@ async def upload_photo(session_id: str, file: UploadFile, view_type: str = Form(
     image_id = db.new_id("img")
     image_hash = evidence.hash_bytes(image_bytes)
 
+    # Save uploaded image file to uploads directory
+    file_path = UPLOADS_DIR / f"{image_id}.jpg"
+    with open(file_path, "wb") as f:
+        f.write(image_bytes)
+
+    image_url = f"/session/{session_id}/image/{image_id}"
+
     record = {
         "view_type": view_type,
         "quality": q,
@@ -56,6 +68,7 @@ async def upload_photo(session_id: str, file: UploadFile, view_type: str = Form(
         "declarations": None,
         "hash": image_hash,
         "accepted": q["accepted"],
+        "image_url": image_url,
     }
 
     if q["accepted"]:
@@ -76,7 +89,21 @@ async def upload_photo(session_id: str, file: UploadFile, view_type: str = Form(
         "reason": q["reason"],
         "quality_metrics": q["metrics"],
         "ocr_status": ocr_status,
+        "image_url": image_url,
     }
+
+
+@app.get("/session/{session_id}/image/{image_id}")
+def get_session_image(session_id: str, image_id: str):
+    session = db.get_session(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+    if image_id not in session.get("images", {}):
+        raise HTTPException(404, "Image not found in session")
+    file_path = UPLOADS_DIR / f"{image_id}.jpg"
+    if not file_path.exists():
+        raise HTTPException(404, "Image file not found on disk")
+    return FileResponse(file_path, media_type="image/jpeg")
 
 
 @app.post("/session/{session_id}/evaluate")

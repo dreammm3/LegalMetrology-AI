@@ -3,7 +3,7 @@ import re
 
 PATTERNS = {
     "MRP": r"(?:MRP|M\.?R\.?P\.?)[^0-9₹]{0,15}(?:RS\.?|₹|INR)?\s*([0-9]+(?:\.[0-9]{1,2})?)\b(?!\d)",
-    "NET_QUANTITY": r"(?:NET\s*(?:QTY|QUANTITY|WT\.?|WEIGHT)|NET\s*CONTENTS?)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?\s?(?:G|GM|GRAM|GRAMS|KG|ML|L|LTR)\b)",
+    "NET_QUANTITY": r"(?:NET\s*(?:QTY\.?|QUANTITY|WT\.?|WEIGHT|CONTENTS?)|NETW|NETWT|N\.?W\.?)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?\s?(?:G|GM|GRAM|GRAMS|KG|MG|ML|L|LTR)\b)",
     "MFG_DATE": r"(?:MFG|MANUFACTURING|PKD|PACKED)\.?\s*(?:DATE|ON)?\s*[:\-]?\s*([0-3]?[0-9](?:[\/\-\.]|\s*)[A-Z]{3}(?:[\/\-\.]|\s*)[0-9]{2,4}|[0-3]?[0-9][\/\-\.][0-1]?[0-9][\/\-\.][0-9]{2,4})",
     "COUNTRY_OF_ORIGIN": r"(?:COUNTRY OF ORIGIN|MADE IN)\s*[:\-]?\s*([A-Z ]{3,20})",
     "MANUFACTURER": r"(?:MANUFACTURED\s*BY|MFD\.?\s*BY|MARKETED\s*BY|PACKED\s*BY)\s*[:\-]?\s*([A-Z][A-Za-z .,&]{3,50}(?:LTD|LIMITED|PVT|LLP|INC)?\.?)",

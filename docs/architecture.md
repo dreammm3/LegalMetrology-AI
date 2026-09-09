@@ -16,7 +16,7 @@ flowchart TD
         
         subgraph Pipeline ["Processing Pipeline"]
             Quality["quality.py (Blur/Glare/Brightness)"]
-            OCR["ocr.py (Tesseract OCR Engine)"]
+            OCR["ocr.py (PaddleOCR Engine)"]
             Decl["declarations.py (Regex & Entity Extractor)"]
             Measure["measurement.py (Calibration & Sizing)"]
             Coverage["coverage.py (Evidence Coverage)"]
@@ -52,7 +52,7 @@ flowchart TD
 
 2. **`ocr.py`**:
    - Pre-processes images (adaptive thresholding, deskewing).
-   - Extracts bounding boxes and text tokens via Tesseract OCR engine.
+   - Extracts bounding boxes and text tokens via PaddleOCR engine.
 
 3. **`declarations.py`**:
    - Parses domain-specific entities using robust regex and rule patterns:

@@ -1,287 +1,221 @@
-const API_BASE = "http://localhost:8000";
-
-const FIELD_LABELS = {
-  MRP: "Maximum Retail Price (MRP)",
-  NET_QUANTITY: "Net quantity",
-  MANUFACTURER: "Manufacturer / packer name",
-  MFG_DATE: "Manufacturing date",
-  COUNTRY_OF_ORIGIN: "Country of origin",
-};
-
-const VIEW_TYPES = [
-  { key: "FRONT", label: "Front" },
-  { key: "BACK", label: "Back" },
-  { key: "LEFT_SIDE", label: "Left side" },
-  { key: "RIGHT_SIDE", label: "Right side" },
-  { key: "CLOSE_UP", label: "Close-up" },
-];
-
-let sessionId = null;
-let selectedView = "FRONT";
-let uploadedPhotos = [];
-
-function goToStep(n) {
-  [1, 2, 3].forEach(i => {
-    const el = document.getElementById(`step-${i}`);
-    if (el) el.classList.toggle("hidden", i !== n);
-    const dot = document.getElementById(`dot-${i}`);
-    if (dot) dot.classList.remove("active", "done");
-  });
-  const activeDot = document.getElementById(`dot-${n}`);
-  if (activeDot) activeDot.classList.add("active");
-  for (let i = 1; i < n; i++) {
-    const d = document.getElementById(`dot-${i}`);
-    if (d) d.classList.add("done");
+// Dynamic Backend URL: Port 8000 on the same host/IP as the frontend
+function getApiBase() {
+  const hostname = window.location.hostname;
+  // If running on a network IP or host other than empty/localhost override, use the current host's IP with port 8000
+  if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+    const protocol = window.location.protocol.startsWith("http") ? window.location.protocol : "http:";
+    return `${protocol}//${hostname}:8000`;
   }
+  const custom = localStorage.getItem("lm_custom_api_base");
+  if (custom) return custom;
+  const protocol = window.location.protocol.startsWith("http") ? window.location.protocol : "http:";
+  return `${protocol}//${hostname || "localhost"}:8000`;
 }
 
-function showError(stepEl, msg) {
-  const el = document.getElementById(stepEl);
-  el.textContent = msg;
-  el.classList.remove("hidden");
+let API_BASE = getApiBase();
+
+// Parse Query Parameters (for Phone handoff: capture.html?session=sess_xxx&mode=mobile)
+const urlParams = new URLSearchParams(window.location.search);
+const sessionFromUrl = urlParams.get("session");
+const isMobileMode = urlParams.get("mode") === "mobile";
+
+if (sessionFromUrl) {
+  localStorage.setItem("lm_current_session_id", sessionFromUrl);
 }
-function hideError(stepEl) {
-  document.getElementById(stepEl).classList.add("hidden");
-}
 
-async function startSession() {
-  hideError("error-1");
-  const inspector_id = document.getElementById("inspector").value.trim();
-  const location = document.getElementById("location").value.trim();
-  const category = document.getElementById("category").value;
-  const product_identifier = document.getElementById("product").value.trim();
+let currentSessionId = sessionFromUrl || localStorage.getItem("lm_current_session_id") || null;
+let mediaStream = null;
+let pollingIntervalId = null;
 
-  if (!inspector_id || !location || !product_identifier) {
-    showError("error-1", "Please fill in all fields before starting.");
-    return;
-  }
-
-  const btn = document.getElementById("btn-start");
-  btn.disabled = true;
-  document.getElementById("btn-start-label").innerHTML = '<span class="spinner"></span>';
+// Initialize Camera (WebRTC for Desktop/Localhost only)
+async function initCamera(videoElementId) {
+  if (isMobileMode) return; // Do not call getUserMedia in mobile HTTP mode
+  const video = document.getElementById(videoElementId);
+  if (!video) return;
 
   try {
-    const res = await fetch(`${API_BASE}/session`, {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+    video.srcObject = mediaStream;
+    video.play();
+  } catch (err) {
+    console.warn("Camera access failed or not permitted (HTTP/LAN context):", err);
+  }
+}
+
+// Capture Video Frame to Blob (Desktop)
+async function captureVideoFrame(videoElementId) {
+  const video = document.getElementById(videoElementId);
+  if (!video || !video.videoWidth) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95);
+  });
+}
+
+// Create New Session via POST /session
+async function createSession(category = "PACKAGED_FOOD", inspectorId = "INSP-402", location = "Pune Inspection Facility", productIdentifier = "Package-Batch-101") {
+  try {
+    const targetUrl = `${API_BASE}/session`;
+    console.log("[SESSION] Creating session at:", targetUrl);
+    const res = await fetch(targetUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inspector_id, location, category, product_identifier })
+      body: JSON.stringify({
+        inspector_id: inspectorId,
+        location: location,
+        category: category,
+        product_identifier: productIdentifier
+      }),
     });
-    if (!res.ok) throw new Error("Could not start the inspection. Please try again.");
+    if (!res.ok) throw new Error("Failed to initialize session");
     const data = await res.json();
-    sessionId = data.session_id;
-    renderViewChips();
-    goToStep(2);
+    currentSessionId = data.session_id;
+    localStorage.setItem("lm_current_session_id", currentSessionId);
+    return data;
   } catch (err) {
-    showError("error-1", err.message || "Something went wrong. Check your connection and try again.");
-  } finally {
-    btn.disabled = false;
-    document.getElementById("btn-start-label").textContent = "Start inspection";
+    console.error("Session creation error:", err);
+    alert("Could not create session: " + err.message);
   }
 }
 
-function renderViewChips() {
-  const row = document.getElementById("view-chips");
-  row.innerHTML = "";
-  VIEW_TYPES.forEach(v => {
-    const chip = document.createElement("div");
-    chip.className = "view-chip" + (v.key === selectedView ? " selected" : "");
-    chip.textContent = v.label;
-    chip.onclick = () => {
-      selectedView = v.key;
-      document.getElementById("selected-view-label").textContent = v.label;
-      renderViewChips();
-    };
-    row.appendChild(chip);
-  });
-}
+// Upload Panel Image via POST /session/{id}/photo
+async function uploadPanel(fileBlob, viewType = "FRONT", onStatusUpdate = null) {
+  if (!currentSessionId) {
+    await createSession();
+  }
 
-async function uploadPhoto() {
-  hideError("error-2");
-  const input = document.getElementById("photo-input");
-  const file = input.files[0];
-  if (!file) return;
+  const uploadUrl = `${API_BASE}/session/${currentSessionId}/photo`;
 
-  const thumbUrl = URL.createObjectURL(file);
-  const rowIndex = uploadedPhotos.length;
-  uploadedPhotos.push({ view: selectedView, accepted: null, reason: null, thumbUrl, pending: true });
-  renderPhotoList();
+  console.log("[MOBILE] uploadPanel invoked");
+  console.log("[MOBILE] API_BASE:", API_BASE);
+  console.log("[MOBILE] target upload URL:", uploadUrl);
+  console.log("[MOBILE] session ID:", currentSessionId);
+  console.log("[MOBILE] captured file:", fileBlob);
+  console.log("[MOBILE] file type:", fileBlob?.type);
+  console.log("[MOBILE] file size (bytes):", fileBlob?.size);
 
-  const form = new FormData();
-  form.append("file", file);
-  form.append("view_type", selectedView);
+  if (onStatusUpdate) onStatusUpdate("Uploading photo to inspection workstation...");
+
+  const formData = new FormData();
+  formData.append("file", fileBlob, `capture_${viewType.toLowerCase()}_${Date.now()}.jpg`);
+  formData.append("view_type", viewType.toUpperCase());
 
   try {
-    const res = await fetch(`${API_BASE}/session/${sessionId}/photo`, { method: "POST", body: form });
-    if (!res.ok) throw new Error("Upload failed. Please try again.");
-    const data = await res.json();
-    uploadedPhotos[rowIndex].accepted = data.accepted;
-    uploadedPhotos[rowIndex].reason = data.reason;
-    uploadedPhotos[rowIndex].pending = false;
-  } catch (err) {
-    uploadedPhotos[rowIndex].accepted = false;
-    uploadedPhotos[rowIndex].reason = "Upload failed — check your connection.";
-    uploadedPhotos[rowIndex].pending = false;
-  }
-  renderPhotoList();
-  input.value = "";
-}
+    console.log("[MOBILE] Executing fetch POST to:", uploadUrl);
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
+    });
 
-function renderPhotoList() {
-  const list = document.getElementById("photo-list");
-  list.innerHTML = "";
-  let anyAccepted = false;
+    console.log("[MOBILE] fetch response status:", res.status, res.statusText);
 
-  uploadedPhotos.forEach(p => {
-    if (p.accepted) anyAccepted = true;
-    const row = document.createElement("div");
-    row.className = "photo-row";
-
-    const img = document.createElement("img");
-    img.className = "photo-thumb";
-    img.src = p.thumbUrl;
-    row.appendChild(img);
-
-    const meta = document.createElement("div");
-    meta.className = "photo-meta";
-
-    const viewName = VIEW_TYPES.find(v => v.key === p.view)?.label || p.view;
-    const viewEl = document.createElement("div");
-    viewEl.className = "photo-view";
-    viewEl.textContent = viewName;
-    meta.appendChild(viewEl);
-
-    const statusEl = document.createElement("div");
-    if (p.pending) {
-      statusEl.className = "photo-status status-pending";
-      statusEl.innerHTML = '<span class="badge-dot dot-pending"></span>Checking photo quality…';
-      meta.appendChild(statusEl);
-    } else if (p.accepted) {
-      statusEl.className = "photo-status status-ok";
-      statusEl.innerHTML = '<span class="badge-dot dot-ok"></span>Accepted';
-      meta.appendChild(statusEl);
-    } else {
-      statusEl.className = "photo-status status-bad";
-      statusEl.innerHTML = '<span class="badge-dot dot-bad"></span>Retake needed';
-      meta.appendChild(statusEl);
-      const tip = document.createElement("div");
-      tip.className = "retake-tip";
-      tip.textContent = p.reason || "Photo quality too low.";
-      meta.appendChild(tip);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error("[MOBILE] upload failed error data:", errData);
+      throw new Error(errData.detail || `Upload failed with status ${res.status}`);
     }
-    row.appendChild(meta);
-    list.appendChild(row);
-  });
 
-  document.getElementById("btn-evaluate").disabled = !anyAccepted;
+    if (onStatusUpdate) onStatusUpdate("Checking image quality & running OCR...");
+    const data = await res.json();
+    console.log("[MOBILE] upload success data:", data);
+
+    if (onStatusUpdate) onStatusUpdate("Processing completed");
+    return data;
+  } catch (err) {
+    console.error("[MOBILE] upload fetch error:", err);
+    if (onStatusUpdate) onStatusUpdate("Upload error: " + err.message);
+    throw err;
+  }
 }
 
+// Evaluate Current Session via POST /session/{id}/evaluate
 async function evaluateSession() {
-  hideError("error-2");
-  const btn = document.getElementById("btn-evaluate");
-  btn.disabled = true;
-  document.getElementById("btn-evaluate-label").innerHTML = '<span class="spinner"></span>';
+  if (!currentSessionId) return null;
 
   try {
-    const res = await fetch(`${API_BASE}/session/${sessionId}/evaluate`, { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Could not evaluate yet — capture at least one clear photo.");
-    renderResults(data);
-    goToStep(3);
+    const res = await fetch(`${API_BASE}/session/${currentSessionId}/evaluate`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Evaluation failed");
+    }
+    return await res.json();
   } catch (err) {
-    showError("error-2", err.message);
-  } finally {
-    btn.disabled = false;
-    document.getElementById("btn-evaluate-label").textContent = "Review findings";
+    console.error("Evaluation error:", err);
+    throw err;
   }
 }
 
-function renderResults(data) {
-  const banner = document.getElementById("verdict-banner");
-  const title = document.getElementById("verdict-title");
-  const desc = document.getElementById("verdict-desc");
-
-  banner.className = "verdict-banner";
-  if (data.verdict === "COMPLIANT") {
-    banner.classList.add("compliant");
-    title.textContent = "Compliant";
-    desc.textContent = "All required declarations were found and meet requirements based on the evidence captured.";
-  } else if (data.verdict === "POTENTIAL_NON_COMPLIANCE") {
-    banner.classList.add("noncompliant");
-    title.textContent = "Potential non-compliance";
-    desc.textContent = "At least one requirement appears to be violated based on the evidence captured. Review the details below.";
-  } else {
-    banner.classList.add("inconclusive");
-    title.textContent = "Needs more evidence";
-    desc.textContent = data.verdict_reason || "Some required declarations could not be confirmed yet. Capture the photos suggested below.";
+// Fetch Single Session Details via GET /session/{id}
+async function fetchSession(sessionId) {
+  try {
+    const res = await fetch(`${API_BASE}/session/${sessionId}`);
+    if (!res.ok) throw new Error("Session fetch failed");
+    return await res.json();
+  } catch (err) {
+    console.error("Fetch session error:", err);
+    return null;
   }
+}
 
-  const list = document.getElementById("requirements-list");
-  list.innerHTML = "";
-  const missingByField = {};
-  (data.missing_evidence || []).forEach(m => missingByField[m.field] = m);
+// Fetch All Sessions via GET /sessions
+async function fetchAllSessions() {
+  try {
+    const res = await fetch(`${API_BASE}/sessions`);
+    if (!res.ok) throw new Error("Failed to fetch sessions list");
+    return await res.json();
+  } catch (err) {
+    console.error("Fetch sessions error:", err);
+    return [];
+  }
+}
 
-  Object.entries(data.coverage || {}).forEach(([field, status]) => {
-    const row = document.createElement("div");
-    row.className = "req-row";
+// Laptop Periodic Polling Loop to detect Field Evidence from Phone
+function startLaptopPolling(onNewEvidenceCallback) {
+  if (isMobileMode) return; // Laptop polling runs on desktop view only
+  if (pollingIntervalId) clearInterval(pollingIntervalId);
 
-    const icon = document.createElement("div");
-    const found = status === "FOUND";
-    icon.className = "req-icon " + (found ? "found" : "missing");
-    icon.textContent = found ? "✓" : "!";
-    row.appendChild(icon);
+  let lastKnownImageCount = -1;
+  let lastKnownVerdict = null;
 
-    const body = document.createElement("div");
-    body.className = "req-body";
+  pollingIntervalId = setInterval(async () => {
+    if (!currentSessionId) return;
+    const sess = await fetchSession(currentSessionId);
+    if (!sess) return;
 
-    const name = document.createElement("div");
-    name.className = "req-name";
-    name.textContent = FIELD_LABELS[field] || field;
-    body.appendChild(name);
+    const currentImageCount = Object.keys(sess.images || {}).length;
+    const currentVerdict = sess.last_evaluation ? sess.last_evaluation.verdict : null;
 
-    const detail = document.createElement("div");
-    detail.className = "req-detail";
-    detail.textContent = found ? "Found and captured." :
-      (status === "CONFLICT" ? "Different photos show conflicting values — needs manual review." :
-        status === "UNCLEAR" ? "Detected but not clearly readable." : "Not yet captured.");
-    body.appendChild(detail);
-
-    if (!found && missingByField[field]) {
-      const action = document.createElement("div");
-      action.className = "req-action";
-      const viewLabel = VIEW_TYPES.find(v => v.key === missingByField[field].recommended_view)?.label || "another angle";
-      action.textContent = `Suggested: photograph the ${viewLabel.toLowerCase()} panel`;
-      body.appendChild(action);
+    if (lastKnownImageCount !== -1 && (currentImageCount > lastKnownImageCount || currentVerdict !== lastKnownVerdict)) {
+      if (onNewEvidenceCallback) {
+        onNewEvidenceCallback(sess, currentImageCount > lastKnownImageCount);
+      }
     }
 
-    row.appendChild(body);
-    list.appendChild(row);
-  });
-
-  document.getElementById("rule-version").textContent = data.rule_version || "—";
-  document.getElementById("evidence-hash").textContent = data.evidence_hash || "—";
-
-  saveToDashboard(data);
+    lastKnownImageCount = currentImageCount;
+    lastKnownVerdict = currentVerdict;
+  }, 2000);
 }
 
-function saveToDashboard(data) {
-  const record = {
-    session_id: data.session_id,
-    verdict: data.verdict,
-    evaluated_at: data.evaluated_at,
-    product: document.getElementById("product") ? document.getElementById("product").value : "",
-  };
-  const existing = JSON.parse(localStorage.getItem("lm_inspections") || "[]");
-  existing.unshift(record);
-  localStorage.setItem("lm_inspections", JSON.stringify(existing.slice(0, 50)));
+// Zero-Dependency Light QR Code Image URL Generator
+function generateQRCodeURL(text, size = 200) {
+  const encodedText = encodeURIComponent(text);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodedText}`;
 }
 
-function startOver() {
-  sessionId = null;
-  uploadedPhotos = [];
-  selectedView = "FRONT";
-  const productEl = document.getElementById("product");
-  if (productEl) productEl.value = "";
-  const listEl = document.getElementById("photo-list");
-  if (listEl) listEl.innerHTML = "";
-  goToStep(1);
+// Construct Mobile Handoff URL (includes mode=mobile)
+function getMobileHandoffURL() {
+  const port = window.location.port ? `:${window.location.port}` : '';
+  const hostname = window.location.hostname || 'localhost';
+  const protocol = window.location.protocol.startsWith('http') ? window.location.protocol : 'http:';
+  return `${protocol}//${hostname}${port}/capture.html?session=${currentSessionId}&mode=mobile`;
 }

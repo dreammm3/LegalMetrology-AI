@@ -1,122 +1,1206 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  <title>Legal Metrology - Capture & Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegalMetrology.AI — Package Inspection Workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css">
 </head>
-
 <body>
 
-  <header class="navbar">
-    <a href="capture.html" class="brand">
-      <div class="brand-icon">⚖️</div>
-      <span>LegalMetrology.AI</span>
-    </a>
-    <nav class="nav-links">
-      <a href="capture.html" class="nav-link active">Capture Evidence</a>
-      <a href="dashboard.html" class="nav-link">Dashboard & Verdicts</a>
-    </nav>
-  </header>
-
-  <main class="page">
-
-    <div class="steps">
-      <div class="step-dot active" id="dot-1"></div>
-      <div class="step-dot" id="dot-2"></div>
-      <div class="step-dot" id="dot-3"></div>
+  <!-- MOBILE FIELD CAPTURE WORKSPACE (Shown when mode=mobile in URL) -->
+  <div id="mobileWorkspace" style="display: none; padding: 1rem; max-width: 500px; margin: 0 auto;">
+    
+    <!-- Branding Header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-light);">
+      <div class="brand-wrapper">
+        <div class="brand-icon" style="width: 32px; height: 32px; font-size: 1rem;">⚖️</div>
+        <div class="brand-text">
+          <span class="brand-title" style="font-size: 1rem;">LegalMetrology.AI</span>
+          <span class="brand-tagline" style="font-size: 0.65rem;">Safer Markets. Fairer Consumers.</span>
+        </div>
+      </div>
+      <span class="badge badge-compliant" style="font-size: 0.7rem;">Field Device</span>
     </div>
 
-    <!-- STEP 1: Start Inspection -->
-    <section id="step-1" class="card">
-      <h1>Start an inspection</h1>
-      <p class="subtitle">Enter a few details about the product you're checking. This takes a few seconds.</p>
-
-      <div id="error-1" class="error-msg hidden"></div>
-
-      <div class="field">
-        <label for="inspector">Your name or ID</label>
-        <input type="text" id="inspector" placeholder="e.g. Rushi Patil" value="insp_001">
+    <!-- Mobile Card Container -->
+    <div class="card">
+      <div style="margin-bottom: 1rem;">
+        <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">Field Capture Device</span>
+        <h1 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 0.1rem;">Package Photo Capture</h1>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+          Session: <strong id="lblMobileSessionId" style="color: var(--primary);">--</strong>
+        </div>
       </div>
-      <div class="field">
-        <label for="location">Inspection location</label>
-        <input type="text" id="location" placeholder="e.g. Pune FDA Office" value="Pune Test Lab">
-      </div>
-      <div class="field">
-        <label for="category">Product category</label>
-        <select id="category">
-          <option value="PACKAGED_FOOD">Packaged food</option>
+
+      <!-- Hidden Native Camera & Gallery Inputs -->
+      <input type="file" id="mobileCameraInput" accept="image/*" capture="environment" style="display: none;">
+      <input type="file" id="mobileGalleryInput" accept="image/*" style="display: none;">
+
+      <!-- Panel Selector -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label class="form-label" for="mobilePanelSelect" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">Package Panel / Side</label>
+        <select id="mobilePanelSelect" class="form-control" style="padding: 0.65rem;">
+          <option value="FRONT">Principal Display Panel (Front)</option>
+          <option value="BACK">Back Panel (Nutrition / Mfg / Expiry)</option>
+          <option value="TOP">Top Panel</option>
+          <option value="BOTTOM">Bottom Panel</option>
+          <option value="LEFT_SIDE">Left Side Panel</option>
+          <option value="RIGHT_SIDE">Right Side Panel</option>
+          <option value="CLOSE_UP">Close-up Detail</option>
+          <option value="OTHER">General View</option>
         </select>
       </div>
-      <div class="field">
-        <label for="product">Product name</label>
-        <input type="text" id="product" placeholder="e.g. Waffle Mix 200g">
+
+      <!-- Photo Viewport & Laser Scan Preview -->
+      <div id="mobileViewportCard" style="margin-bottom: 1rem;">
+        <div id="mobileCameraPlaceholder" class="media-viewport" style="height: 240px; background: var(--bg-subtle);">
+          <div style="text-align: center; color: var(--text-muted); padding: 1rem;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📸</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Tap "Capture Photo" to open camera</div>
+          </div>
+        </div>
+
+        <div id="mobileScanContainer" class="scan-overlay-container" style="display: none; height: 260px;">
+          <img id="mobileImagePreview" alt="Captured Package Photo">
+          <div id="mobileLaserLine" class="scan-laser-line" style="display: none;"></div>
+        </div>
       </div>
 
-      <button class="btn btn-primary" id="btn-start" onclick="startSession()">
-        <span id="btn-start-label">Start inspection</span>
-      </button>
-    </section>
-
-    <!-- STEP 2: Capture Evidence -->
-    <section id="step-2" class="card hidden">
-      <h1>Capture evidence</h1>
-      <p class="subtitle">Photograph each panel of the package. Hold steady, avoid glare, and make sure text is in
-        focus.</p>
-
-      <div id="error-2" class="error-msg hidden"></div>
-
-      <div class="view-chip-row" id="view-chips"></div>
-
-      <div class="capture-box">
-        <div class="capture-icon">📷</div>
-        <label class="file-btn" for="photo-input">Take or choose photo</label>
-        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="uploadPhoto()">
-        <p>Selected view: <strong id="selected-view-label">Front</strong></p>
+      <!-- Processing Status Box -->
+      <div id="mobileProcessingBox" class="processing-status-box" style="display: none;">
+        <div class="spinner"></div>
+        <span id="mobileProcessingStatusText" class="processing-text">Processing...</span>
       </div>
 
-      <div class="photo-list" id="photo-list"></div>
-
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
-        <button class="btn btn-primary" id="btn-evaluate" onclick="evaluateSession()" disabled>
-          <span id="btn-evaluate-label">Review findings</span>
+      <!-- Mobile Action Buttons -->
+      <div id="mobileCaptureControls" style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1rem;">
+        <button id="btnMobileCapture" class="btn btn-primary btn-lg btn-block">
+          📸 Capture Photo
+        </button>
+        <button id="btnMobileGallery" class="btn btn-secondary btn-block" style="font-size: 0.85rem;">
+          📁 Upload from Gallery
         </button>
       </div>
-    </section>
 
-    <!-- STEP 3: Review Findings -->
-    <section id="step-3" class="card hidden">
-      <h1>Inspection findings</h1>
-      <p class="subtitle">Based on the evidence captured so far.</p>
-
-      <div id="verdict-banner" class="verdict-banner">
-        <div class="verdict-title" id="verdict-title">—</div>
-        <div class="verdict-desc" id="verdict-desc">—</div>
+      <div id="mobileConfirmControls" style="display: none; flex-direction: column; gap: 0.65rem; margin-bottom: 1rem;">
+        <button id="btnMobileConfirm" class="btn btn-primary btn-lg btn-block">
+          ✓ Use Photo & Process
+        </button>
+        <button id="btnMobileRetake" class="btn btn-secondary btn-block">
+          📸 Retake Photo
+        </button>
       </div>
 
-      <div class="section-label">Required declarations</div>
-      <div id="requirements-list"></div>
-
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="goToStep(2)">Capture more evidence</button>
-        <button class="btn btn-primary" onclick="startOver()">New inspection</button>
+      <!-- Short Photo Guidance -->
+      <div class="photo-guidance">
+        <strong>Photo Guidance:</strong>
+        <ul>
+          <li>Keep the declaration text in frame</li>
+          <li>Use good lighting</li>
+          <li>Avoid glare</li>
+        </ul>
       </div>
 
-      <div class="evidence-footer">
-        Rule set version: <span id="rule-version" class="mono">—</span><br>
-        Evidence record: <span id="evidence-hash" class="mono">—</span>
+      <!-- Mini Panel History Tray for Mobile -->
+      <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-light); padding-top: 1rem;">
+        <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">
+          Captured Session Panels (<span id="mobilePanelCount">0</span>)
+        </div>
+        <div id="mobilePanelsGrid" class="panel-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;">No photos captured in session yet.</div>
+        </div>
       </div>
-    </section>
 
-  </main>
+    </div>
+  </div>
+
+
+  <!-- DESKTOP LAPTOP WORKSPACE (Shown when mode=mobile is NOT in URL) -->
+  <div id="desktopWorkspace">
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+      <a href="capture.html" class="brand-wrapper">
+        <div class="brand-icon">⚖️</div>
+        <div class="brand-text">
+          <span class="brand-title">LegalMetrology.AI</span>
+          <span class="brand-tagline">Safer Markets. Fairer Consumers.</span>
+        </div>
+      </a>
+      <nav class="nav-links">
+        <button id="btnConnectPhone" class="btn btn-secondary" style="font-size: 0.8rem;">📱 Connect Phone</button>
+        <a href="capture.html" class="nav-link active">Capture Evidence</a>
+        <a href="dashboard.html" class="nav-link">Dashboard & Verdicts</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      
+      <!-- Active Session Metadata Bar -->
+      <div class="session-info-bar">
+        <div class="session-meta-group">
+          <div class="session-meta-item">
+            <span class="session-meta-label">Inspection Session</span>
+            <span class="session-meta-value" id="lblSessionId">Initializing...</span>
+          </div>
+          <div class="session-meta-item">
+            <span class="session-meta-label">Inspector ID</span>
+            <span class="session-meta-value" id="lblInspectorId">INSP-402</span>
+          </div>
+          <div class="session-meta-item">
+            <span class="session-meta-label">Location</span>
+            <span class="session-meta-value" id="lblLocation">Pune Inspection Facility</span>
+          </div>
+          <div class="session-meta-item">
+            <span class="session-meta-label">Category / Product</span>
+            <span class="session-meta-value" id="lblProduct">PACKAGED_FOOD (Package-Batch-101)</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btnNewSession" class="btn btn-secondary" style="font-size: 0.8rem;">+ New Session</button>
+        </div>
+      </div>
+
+      <!-- Inspection Progress Stepper -->
+      <div class="stepper-container">
+        <div class="stepper">
+          <div class="step-item active" id="step1">
+            <div class="step-number">1</div>
+            <span>Front Photo</span>
+          </div>
+          <div class="step-divider" id="div1"></div>
+
+          <div class="step-item" id="step2">
+            <div class="step-number">2</div>
+            <span>Analysis</span>
+          </div>
+          <div class="step-divider" id="div2"></div>
+
+          <div class="step-item" id="step3">
+            <div class="step-number">3</div>
+            <span>Back Photo</span>
+          </div>
+          <div class="step-divider" id="div3"></div>
+
+          <div class="step-item" id="step4">
+            <div class="step-number">4</div>
+            <span>Measurements</span>
+          </div>
+          <div class="step-divider" id="div4"></div>
+
+          <div class="step-item" id="step5">
+            <div class="step-number">5</div>
+            <span>Compliance</span>
+          </div>
+          <div class="step-divider" id="div5"></div>
+
+          <div class="step-item" id="step6">
+            <div class="step-number">6</div>
+            <span>Report</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Workspace 3-Column Grid -->
+      <div class="workspace-grid">
+
+        <!-- COLUMN 1: Field Evidence Camera & Photo Viewport -->
+        <div class="card">
+          <div class="card-title-bar">
+            <h2 class="card-title">📷 1. Field Evidence Viewport</h2>
+            <span id="panelStatusBadge" class="badge badge-neutral">Waiting for Field Evidence</span>
+          </div>
+
+          <!-- Camera / Photo Scanning Viewport -->
+          <div class="media-viewport" id="viewportContainer">
+            <video id="cameraVideo" autoplay playsinline muted></video>
+            
+            <!-- Captured Photo Scanning Overlay -->
+            <div id="scanContainer" class="scan-overlay-container" style="display: none;">
+              <img id="imagePreview" alt="Captured Package Photo">
+              <div id="laserLine" class="scan-laser-line" style="display: none;"></div>
+            </div>
+          </div>
+
+          <!-- Compact Image Metadata Box -->
+          <div id="imgMetadataBox" class="meta-grid" style="display: none;">
+            <div class="meta-grid-item">
+              <span class="meta-grid-label">Panel Type</span>
+              <span id="metaPanelType" class="meta-grid-val">FRONT</span>
+            </div>
+            <div class="meta-grid-item">
+              <span class="meta-grid-label">Source Device</span>
+              <span id="metaSource" class="meta-grid-val">📱 Field Phone</span>
+            </div>
+            <div class="meta-grid-item">
+              <span class="meta-grid-label">Status</span>
+              <span id="metaStatus" class="meta-grid-val">✓ Accepted</span>
+            </div>
+          </div>
+
+          <!-- Processing Status Feedback -->
+          <div id="processingBox" class="processing-status-box" style="display: none;">
+            <div class="spinner"></div>
+            <span id="processingStatusText" class="processing-text">Processing image...</span>
+          </div>
+
+          <!-- Photo Actions (Confirm / Retake) -->
+          <div id="photoActionRow" style="display: none; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="btnConfirmUpload" class="btn btn-primary" style="flex: 1;">✓ Use Photo & Process</button>
+            <button id="btnRetakeCapture" class="btn btn-secondary" style="flex: 1;">📸 Retake</button>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label" for="panelSelect" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 0.3rem;">Package Panel / View Type</label>
+            <select id="panelSelect" class="form-control">
+              <option value="FRONT">Principal Display Panel (Front)</option>
+              <option value="BACK">Back Panel (Ingredients / Expiry / Mfg)</option>
+              <option value="TOP">Top Panel</option>
+              <option value="BOTTOM">Bottom Panel</option>
+              <option value="LEFT_SIDE">Left Side Panel</option>
+              <option value="RIGHT_SIDE">Right Side Panel</option>
+              <option value="CLOSE_UP">Close-up Detail</option>
+              <option value="OTHER">General View</option>
+            </select>
+          </div>
+
+          <div id="captureControlsRow" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="captureBtn" class="btn btn-primary" style="flex: 1;">📸 Laptop Capture</button>
+            <label class="btn btn-secondary" style="flex: 1; cursor: pointer;">
+              📁 Upload <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </label>
+          </div>
+
+          <div class="photo-guidance">
+            <strong>Inspection Tip:</strong> Use phone QR scan for mobile capture, or upload/capture directly on workstation.
+          </div>
+        </div>
+
+        <!-- COLUMN 2: AI Analysis & OCR Extraction -->
+        <div class="card">
+          <div class="card-title-bar">
+            <h2 class="card-title">🤖 2. AI Analysis & OCR</h2>
+            <span id="ocrStateBadge" class="badge badge-neutral">No Panel Captured</span>
+          </div>
+
+          <!-- Quality Metrics Summary -->
+          <div id="qualityMetricsCard" style="background: var(--bg-subtle); padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.8rem;">
+            <div style="font-weight: 600; margin-bottom: 0.3rem;">Image Quality Assessment</div>
+            <div id="qualityMetricsDetails" style="color: var(--text-secondary);">Upload or capture a panel to run focus, exposure, and glare verification.</div>
+          </div>
+
+          <!-- Extracted Text Display -->
+          <div style="margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Extracted OCR Text</span>
+              <span id="ocrConfText" style="font-size: 0.75rem; color: var(--text-muted);">Conf: --</span>
+            </div>
+            <div id="ocrBox" class="ocr-box">No text extracted yet.</div>
+          </div>
+        </div>
+
+        <!-- COLUMN 3: Declaration Checklist & Next Step -->
+        <div class="card">
+          <div class="card-title-bar">
+            <h2 class="card-title">📋 3. Declaration Checklist</h2>
+            <span id="coverageBadge" class="badge badge-neutral">0% Coverage</span>
+          </div>
+
+          <div id="checklistContainer">
+            <div class="checklist-item">
+              <span class="checklist-label">MRP (incl. of all taxes)</span>
+              <span class="badge badge-warning">○ Pending</span>
+            </div>
+            <div class="checklist-item">
+              <span class="checklist-label">Net Quantity</span>
+              <span class="badge badge-warning">○ Pending</span>
+            </div>
+            <div class="checklist-item">
+              <span class="checklist-label">Manufacturer / Packer</span>
+              <span class="badge badge-warning">○ Pending</span>
+            </div>
+            <div class="checklist-item">
+              <span class="checklist-label">Manufacturing / Packing Date</span>
+              <span class="badge badge-warning">○ Pending</span>
+            </div>
+            <div class="checklist-item">
+              <span class="checklist-label">Country of Origin</span>
+              <span class="badge badge-warning">○ Pending</span>
+            </div>
+          </div>
+
+          <!-- Next Step Card -->
+          <div id="nextStepCard" class="next-step-card">
+            <div class="next-step-title">
+              <span>⚠ Action Required</span>
+            </div>
+            <div class="next-step-desc" id="nextStepDesc">
+              Capture the front or back panel of the package to start compliance verification.
+            </div>
+            <button id="btnNextStepAction" class="btn btn-primary btn-block" style="font-size: 0.8rem;">
+              Capture Panel →
+            </button>
+          </div>
+
+          <div style="margin-top: 1.25rem;">
+            <button id="evaluateBtn" class="btn btn-primary btn-block" style="padding: 0.75rem;">
+              ⚖️ Evaluate Compliance Verdict
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Multi-Photo Session Evidence Tray -->
+      <div class="card panel-tray-card">
+        <div class="card-title-bar">
+          <h2 class="card-title">🖼️ Session Evidence (<span id="panelCount">0</span> Photos Captured)</h2>
+          <span style="font-size: 0.775rem; color: var(--text-muted);" id="lblTraySessionSub">All photos belong to inspection session: --</span>
+        </div>
+        <div id="panelsGrid" class="panel-grid">
+          <div style="color: var(--text-muted); font-size: 0.825rem; grid-column: 1 / -1;">
+            No panel photos added to session yet.
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Evaluation Verdict Container -->
+      <div id="verdictSection" style="margin-top: 1.5rem; display: none;">
+        
+        <div id="verdictBanner" class="verdict-banner INCONCLUSIVE">
+          <div class="verdict-header">
+            <div class="verdict-title" id="verdictTitle">Verdict: INCONCLUSIVE</div>
+            <span id="verdictBadge" class="badge badge-inconclusive" style="font-size: 0.85rem; padding: 0.3rem 0.75rem;">INCONCLUSIVE</span>
+          </div>
+          <div class="verdict-reason" id="verdictReason">
+            Evidence is insufficient or measurement uncertainty overlaps the applicable threshold.
+          </div>
+        </div>
+
+        <div id="inconclusiveActions" style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <button id="btnRetakePhoto" class="btn btn-secondary">📸 Request Better Evidence</button>
+          <button id="btnHumanReview" class="btn btn-secondary">👤 Request Human Review</button>
+        </div>
+
+        <div class="workspace-grid" style="grid-template-columns: 2fr 1fr;">
+          <div class="card">
+            <div class="card-title-bar">
+              <h2 class="card-title">🔍 Rule-by-Rule Audit Findings</h2>
+              <span id="ruleVersionBadge" class="badge badge-neutral">Rule Set: lmpc_v2026.1</span>
+            </div>
+            <div id="findingsContainer"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title-bar">
+              <h2 class="card-title">📐 Physical Measurements</h2>
+            </div>
+            <div id="measurementBox" style="background: var(--bg-subtle); padding: 0.85rem; border-radius: var(--radius-sm); font-size: 0.825rem; margin-bottom: 1rem;">
+              <div style="font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Numeral Height & PDP Sizing</div>
+              <div id="measurementDetails" style="color: var(--text-secondary);">
+                Measurement evidence required.
+              </div>
+            </div>
+
+            <div class="card-title-bar" style="margin-top: 1rem;">
+              <h2 class="card-title">🔒 Evidence Integrity</h2>
+            </div>
+            <div style="font-size: 0.775rem; color: var(--text-muted); word-break: break-all;">
+              <div><strong>SHA-256 Chain Hash:</strong></div>
+              <code id="hashText" style="background: var(--bg-subtle); padding: 0.35rem 0.5rem; border-radius: 4px; display: block; margin-top: 0.25rem; font-family: monospace;">None</code>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- QR Code Phone Handoff Modal -->
+    <div id="qrModal" class="modal-overlay" style="display: none;">
+      <div class="modal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">📱 Connect Field Phone Device</h3>
+          <button id="btnCloseQrModal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Scan this QR code using your smartphone camera to connect to this exact inspection session:
+        </p>
+
+        <div style="text-align: center; margin-bottom: 1.25rem; padding: 1rem; background: var(--bg-subtle); border-radius: var(--radius-sm);">
+          <img id="qrImage" src="" alt="Session QR Code" style="width: 180px; height: 180px; background: white; padding: 8px; border-radius: 8px;">
+          <div style="font-size: 0.75rem; font-weight: 600; color: var(--primary); margin-top: 0.5rem;" id="qrSessionLabel">Session: --</div>
+        </div>
+
+        <div style="font-size: 0.775rem; color: var(--text-muted); margin-bottom: 0.5rem;">Direct Session URL:</div>
+        <input type="text" id="txtMobileUrl" class="form-control" readonly style="font-size: 0.75rem; font-family: monospace; margin-bottom: 1rem;">
+
+        <button id="btnCopyUrl" class="btn btn-secondary btn-block">📋 Copy Session URL</button>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="display: none;" class="toast-notification">
+      <span style="font-size: 1.2rem;">📱</span>
+      <span id="toastText">Field evidence received from phone!</span>
+    </div>
+  </div>
 
   <script src="assets/app.js"></script>
-</body>
+  <script>
+    let capturedBlobPending = null;
+    let mobileBlobPending = null;
+    let selectedImageId = null;
 
+    document.addEventListener("DOMContentLoaded", async () => {
+      
+      // Mode Detection: Mobile Field Device UI vs Laptop Desktop Workspace
+      if (isMobileMode) {
+        document.getElementById("mobileWorkspace").style.display = "block";
+        document.getElementById("desktopWorkspace").style.display = "none";
+        initMobileFieldCapture();
+        return;
+      } else {
+        document.getElementById("desktopWorkspace").style.display = "block";
+        document.getElementById("mobileWorkspace").style.display = "none";
+      }
+
+      // --- DESKTOP LAPTOP WORKSPACE INIT ---
+      initCamera("cameraVideo");
+
+      if (currentSessionId) {
+        document.getElementById("lblSessionId").innerText = currentSessionId;
+        document.getElementById("lblTraySessionSub").innerText = `All photos belong to inspection session: ${currentSessionId}`;
+        const sess = await fetchSession(currentSessionId);
+        if (sess) {
+          updateSessionHeader(sess);
+          refreshSessionView(sess);
+        } else {
+          document.getElementById("lblSessionId").innerText = "Session unavailable — start a new inspection";
+        }
+      } else {
+        document.getElementById("lblSessionId").innerText = "Creating session...";
+        const sess = await createSession();
+        if (sess) {
+          updateSessionHeader(sess);
+          refreshSessionView(sess);
+        } else {
+          document.getElementById("lblSessionId").innerText = "Session unavailable — start a new inspection";
+        }
+      }
+
+      // Start periodic 2-second background polling for Laptop
+      startLaptopPolling((sess, isNewImage) => {
+        if (isNewImage) {
+          showToast("📱 New field evidence received from phone device!");
+          // Trigger smooth visual processing animation sequence on laptop
+          runLaptopProcessingVisualSequence();
+        }
+        updateSessionHeader(sess);
+        refreshSessionView(sess);
+      });
+
+      // QR Code Modal Handlers
+      document.getElementById("btnConnectPhone").addEventListener("click", openQrModal);
+      document.getElementById("btnCloseQrModal").addEventListener("click", () => {
+        document.getElementById("qrModal").style.display = "none";
+      });
+      document.getElementById("btnCopyUrl").addEventListener("click", () => {
+        const txt = document.getElementById("txtMobileUrl");
+        txt.select();
+        navigator.clipboard.writeText(txt.value);
+        alert("Session URL copied to clipboard!");
+      });
+
+      // New Session Handler
+      document.getElementById("btnNewSession").addEventListener("click", async () => {
+        if (confirm("Start a new inspection session?")) {
+          localStorage.removeItem("lm_current_session_id");
+          currentSessionId = null;
+          document.getElementById("lblSessionId").innerText = "Creating session...";
+          const sess = await createSession();
+          if (sess) {
+            updateSessionHeader(sess);
+            refreshSessionView(sess);
+          } else {
+            document.getElementById("lblSessionId").innerText = "Session unavailable — start a new inspection";
+          }
+        }
+      });
+
+      // Capture Photo Handler
+      document.getElementById("captureBtn").addEventListener("click", async () => {
+        const blob = await captureVideoFrame("cameraVideo");
+        if (!blob) return alert("Could not capture frame from camera video feed.");
+        showCapturedPhotoPreview(blob);
+      });
+
+      // File Input Handler
+      document.getElementById("fileInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) showCapturedPhotoPreview(file);
+      });
+
+      // Confirm Upload Handler
+      document.getElementById("btnConfirmUpload").addEventListener("click", () => {
+        if (capturedBlobPending) {
+          handleUploadProcess(capturedBlobPending);
+        }
+      });
+
+      // Retake Photo Handler
+      document.getElementById("btnRetakeCapture").addEventListener("click", () => {
+        capturedBlobPending = null;
+        document.getElementById("scanContainer").style.display = "none";
+        document.getElementById("cameraVideo").style.display = "block";
+        document.getElementById("photoActionRow").style.display = "none";
+        document.getElementById("captureControlsRow").style.display = "flex";
+      });
+
+      // Evaluate Button Handler
+      document.getElementById("evaluateBtn").addEventListener("click", async () => {
+        try {
+          const evalResult = await evaluateSession();
+          if (evalResult) {
+            renderEvaluationResult(evalResult);
+          }
+        } catch (err) {
+          alert("Evaluation failed: " + err.message);
+        }
+      });
+
+      // Next Step Action Handler
+      document.getElementById("btnNextStepAction").addEventListener("click", () => {
+        const panelSelect = document.getElementById("panelSelect");
+        if (panelSelect.value === "FRONT") {
+          panelSelect.value = "BACK";
+        }
+        document.getElementById("captureBtn").focus();
+        document.getElementById("viewportContainer").scrollIntoView({ behavior: "smooth" });
+      });
+
+      // Inconclusive Action Handlers
+      document.getElementById("btnRetakePhoto").addEventListener("click", () => {
+        document.getElementById("viewportContainer").scrollIntoView({ behavior: "smooth" });
+      });
+      document.getElementById("btnHumanReview").addEventListener("click", () => {
+        alert("Human review requested for Session: " + currentSessionId);
+      });
+    });
+
+    let mobileEventsInitialized = false;
+
+    // --- MOBILE FIELD CAPTURE INIT & EVENT HANDLERS ---
+    async function initMobileFieldCapture() {
+      // 1. Synchronously attach DOM event listeners FIRST (guarded against duplicate initialization)
+      if (!mobileEventsInitialized) {
+        mobileEventsInitialized = true;
+
+        document.getElementById("btnMobileCapture").addEventListener("click", () => {
+          document.getElementById("mobileCameraInput").click();
+        });
+
+        document.getElementById("btnMobileGallery").addEventListener("click", () => {
+          document.getElementById("mobileGalleryInput").click();
+        });
+
+        document.getElementById("mobileCameraInput").addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          console.log("[MOBILE] camera change fired");
+          console.log("[MOBILE] file:", file);
+          console.log("[MOBILE] file size:", file?.size);
+          if (file) handleMobileFileSelected(file);
+        });
+
+        document.getElementById("mobileGalleryInput").addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          console.log("[MOBILE] gallery change fired");
+          console.log("[MOBILE] file:", file);
+          console.log("[MOBILE] file size:", file?.size);
+          if (file) handleMobileFileSelected(file);
+        });
+
+        document.getElementById("btnMobileRetake").addEventListener("click", () => {
+          mobileBlobPending = null;
+          document.getElementById("mobileScanContainer").style.display = "none";
+          document.getElementById("mobileCameraPlaceholder").style.display = "flex";
+          document.getElementById("mobileConfirmControls").style.display = "none";
+          document.getElementById("mobileCaptureControls").style.display = "flex";
+          document.getElementById("mobileLaserLine").style.display = "none";
+        });
+
+        document.getElementById("btnMobileConfirm").addEventListener("click", async () => {
+          console.log("[MOBILE] confirm clicked");
+          console.log("[MOBILE] currentSessionId:", currentSessionId);
+          console.log("[MOBILE] API_BASE:", API_BASE);
+          console.log("[MOBILE] upload URL:", `${API_BASE}/session/${currentSessionId}/photo`);
+          console.log("[MOBILE] mobileBlobPending:", mobileBlobPending);
+          if (!mobileBlobPending) return;
+          const viewType = document.getElementById("mobilePanelSelect").value;
+          const procBox = document.getElementById("mobileProcessingBox");
+          const procText = document.getElementById("mobileProcessingStatusText");
+          const laserLine = document.getElementById("mobileLaserLine");
+
+          procBox.style.display = "flex";
+          laserLine.style.display = "block";
+
+          try {
+            console.log("[MOBILE] fetch starting");
+            const res = await uploadPanel(mobileBlobPending, viewType, (msg) => {
+              procText.innerText = msg;
+            });
+
+            procText.innerText = "✓ Evidence sent to inspection workstation!";
+            
+            const updatedSess = await fetchSession(currentSessionId);
+            if (updatedSess) refreshMobileView(updatedSess);
+
+            setTimeout(() => {
+              mobileBlobPending = null;
+              procBox.style.display = "none";
+              laserLine.style.display = "none";
+              document.getElementById("mobileScanContainer").style.display = "none";
+              document.getElementById("mobileCameraPlaceholder").style.display = "flex";
+              document.getElementById("mobileConfirmControls").style.display = "none";
+              document.getElementById("mobileCaptureControls").style.display = "flex";
+            }, 1500);
+          } catch (err) {
+            console.error("[MOBILE] confirm catch error:", err);
+            alert("Upload error: " + err.message);
+            procBox.style.display = "none";
+            laserLine.style.display = "none";
+          }
+        });
+      }
+
+      // 2. Asynchronous session fetch AFTER event listeners are safely bound
+      if (currentSessionId) {
+        document.getElementById("lblMobileSessionId").innerText = currentSessionId;
+        const sess = await fetchSession(currentSessionId);
+        if (sess) {
+          refreshMobileView(sess);
+        } else {
+          document.getElementById("lblMobileSessionId").innerText = "Session unavailable";
+        }
+      } else {
+        document.getElementById("lblMobileSessionId").innerText = "No active session";
+      }
+    }
+
+    function handleMobileFileSelected(file) {
+      mobileBlobPending = file;
+      console.log("[MOBILE] handleMobileFileSelected set mobileBlobPending:", mobileBlobPending);
+      const previewImg = document.getElementById("mobileImagePreview");
+      previewImg.src = URL.createObjectURL(file);
+
+      document.getElementById("mobileCameraPlaceholder").style.display = "none";
+      document.getElementById("mobileScanContainer").style.display = "block";
+      document.getElementById("mobileCaptureControls").style.display = "none";
+      document.getElementById("mobileConfirmControls").style.display = "flex";
+    }
+
+    function refreshMobileView(sess) {
+      document.getElementById("lblMobileSessionId").innerText = sess.session_id;
+      const images = sess.images || {};
+      const imageKeys = Object.keys(images);
+      document.getElementById("mobilePanelCount").innerText = imageKeys.length;
+
+      const grid = document.getElementById("mobilePanelsGrid");
+      grid.innerHTML = "";
+      if (imageKeys.length === 0) {
+        grid.innerHTML = `<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: 1 / -1;">No photos captured in session yet.</div>`;
+      } else {
+        imageKeys.forEach(imgId => {
+          const rec = images[imgId];
+          const rawUrl = rec.image_url || rec.url || rec.data_url || rec.src || rec.preview_url;
+          const thumbUrl = rawUrl ? (rawUrl.startsWith("http") || rawUrl.startsWith("data:") ? rawUrl : `${API_BASE}${rawUrl}`) : null;
+          const div = document.createElement("div");
+          div.className = "panel-thumb-box";
+
+          const iconOrImg = thumbUrl 
+            ? `<img src="${thumbUrl}" alt="${rec.view_type}" style="width: 28px; height: 28px; object-fit: cover; border-radius: 4px;">` 
+            : `<div style="font-size: 1rem;">🖼️</div>`;
+
+          div.innerHTML = `
+            ${iconOrImg}
+            <div class="panel-thumb-label" style="font-size: 0.7rem;">${rec.view_type || "PANEL"}</div>
+            <span class="badge ${rec.accepted ? 'badge-pass' : 'badge-fail'}" style="font-size: 0.6rem;">${rec.accepted ? 'OK' : 'REJ'}</span>
+          `;
+          grid.appendChild(div);
+        });
+      }
+    }
+
+    // --- DESKTOP HELPER FUNCTIONS ---
+    function openQrModal() {
+      const handoffUrl = getMobileHandoffURL();
+      document.getElementById("qrImage").src = generateQRCodeURL(handoffUrl, 200);
+      document.getElementById("txtMobileUrl").value = handoffUrl;
+      document.getElementById("qrSessionLabel").innerText = `Session: ${currentSessionId}`;
+      document.getElementById("qrModal").style.display = "flex";
+    }
+
+    function showCapturedPhotoPreview(fileBlob) {
+      capturedBlobPending = fileBlob;
+      const previewImg = document.getElementById("imagePreview");
+      const scanContainer = document.getElementById("scanContainer");
+      const video = document.getElementById("cameraVideo");
+
+      previewImg.src = URL.createObjectURL(fileBlob);
+      scanContainer.style.display = "block";
+      video.style.display = "none";
+
+      document.getElementById("photoActionRow").style.display = "flex";
+      document.getElementById("captureControlsRow").style.display = "none";
+    }
+
+    function updateSessionHeader(sess) {
+      document.getElementById("lblSessionId").innerText = sess.session_id;
+      document.getElementById("lblInspectorId").innerText = sess.inspector_id || "INSP-402";
+      document.getElementById("lblLocation").innerText = sess.location || "Pune Inspection Facility";
+      document.getElementById("lblProduct").innerText = `${sess.category || "PACKAGED_FOOD"} (${sess.product_identifier || "Batch-101"})`;
+      document.getElementById("lblTraySessionSub").innerText = `All photos belong to inspection session: ${sess.session_id}`;
+    }
+
+    function runLaptopProcessingVisualSequence() {
+      const procBox = document.getElementById("processingBox");
+      const procText = document.getElementById("processingStatusText");
+      const laserLine = document.getElementById("laserLine");
+
+      procBox.style.display = "flex";
+      laserLine.style.display = "block";
+      procText.innerText = "📱 FIELD EVIDENCE RECEIVED — Running quality check...";
+
+      setTimeout(() => {
+        procText.innerText = "🤖 Running PaddleOCR text analysis...";
+      }, 1000);
+
+      setTimeout(() => {
+        procText.innerText = "📋 Extracting mandatory package declarations...";
+      }, 2000);
+
+      setTimeout(() => {
+        procBox.style.display = "none";
+        laserLine.style.display = "none";
+      }, 3000);
+    }
+
+    async function handleUploadProcess(fileBlob) {
+      const viewType = document.getElementById("panelSelect").value;
+      const procBox = document.getElementById("processingBox");
+      const procText = document.getElementById("processingStatusText");
+      const laserLine = document.getElementById("laserLine");
+
+      procBox.style.display = "flex";
+      laserLine.style.display = "block";
+
+      try {
+        const res = await uploadPanel(fileBlob, viewType, (msg) => {
+          procText.innerText = msg;
+        });
+
+        const qMetrics = document.getElementById("qualityMetricsDetails");
+        if (res.accepted) {
+          qMetrics.innerHTML = `<span style="color: var(--success-text); font-weight: 600;">✓ Quality Accepted</span> | Blur: ${res.quality_metrics.blur_score} | Brightness: ${res.quality_metrics.brightness} | Glare: ${res.quality_metrics.glare_ratio}`;
+          document.getElementById("panelStatusBadge").className = "badge badge-pass";
+          document.getElementById("panelStatusBadge").innerText = "PASSED";
+        } else {
+          qMetrics.innerHTML = `<span style="color: var(--danger-text); font-weight: 600;">⚠ Rejected: ${res.reason}</span> | Blur: ${res.quality_metrics.blur_score}`;
+          document.getElementById("panelStatusBadge").className = "badge badge-fail";
+          document.getElementById("panelStatusBadge").innerText = "REJECTED";
+        }
+
+        document.getElementById("ocrStateBadge").innerText = res.ocr_status || "PROCESSED";
+        document.getElementById("ocrStateBadge").className = res.ocr_status === "DETECTED" ? "badge badge-pass" : "badge badge-warning";
+
+        refreshSessionView();
+      } catch (err) {
+        alert("Upload error: " + err.message);
+      } finally {
+        procBox.style.display = "none";
+        laserLine.style.display = "none";
+      }
+    }
+
+    async function refreshSessionView(sessParam = null) {
+      if (!currentSessionId) return;
+      const sess = sessParam || await fetchSession(currentSessionId);
+      if (!sess) return;
+
+      updateSessionHeader(sess);
+
+      const images = sess.images || {};
+      const imageKeys = Object.keys(images);
+      document.getElementById("panelCount").innerText = imageKeys.length;
+
+      // Update Panel Stepper dynamically based on uploaded images
+      updateProgressStepper(imageKeys.length, sess.images, sess.last_evaluation);
+
+      // Update Panel Thumbnails Tray
+      const panelsGrid = document.getElementById("panelsGrid");
+      panelsGrid.innerHTML = "";
+      if (imageKeys.length === 0) {
+        panelsGrid.innerHTML = `<div style="color: var(--text-muted); font-size: 0.825rem; grid-column: 1 / -1;">No panel photos added to session yet.</div>`;
+      } else {
+        imageKeys.forEach((imgId, idx) => {
+          const rec = images[imgId];
+          const rawUrl = rec.image_url || rec.url || rec.data_url || rec.src || rec.preview_url;
+          const thumbUrl = rawUrl ? (rawUrl.startsWith("http") || rawUrl.startsWith("data:") ? rawUrl : `${API_BASE}${rawUrl}`) : null;
+          const div = document.createElement("div");
+          const isSel = selectedImageId === imgId || (!selectedImageId && idx === imageKeys.length - 1);
+          div.className = `panel-thumb-box ${isSel ? 'active' : ''}`;
+
+          const iconOrImg = thumbUrl 
+            ? `<img src="${thumbUrl}" alt="${rec.view_type}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px;">` 
+            : `<div style="font-size: 1.2rem;">🖼️</div>`;
+
+          div.innerHTML = `
+            ${iconOrImg}
+            <div class="panel-thumb-label">${rec.view_type || "PANEL"}</div>
+            <span class="badge ${rec.accepted ? 'badge-pass' : 'badge-fail'}" style="font-size: 0.65rem; margin-top: 0.2rem;">${rec.accepted ? '✓ OK' : 'REJECTED'}</span>
+          `;
+          div.addEventListener("click", () => {
+            selectedImageId = imgId;
+            selectSessionPanel(rec, imgId);
+          });
+          panelsGrid.appendChild(div);
+        });
+
+        // Select latest panel if not manually selected
+        const latestId = selectedImageId && images[selectedImageId] ? selectedImageId : imageKeys[imageKeys.length - 1];
+        if (latestId && images[latestId]) {
+          selectSessionPanel(images[latestId], latestId);
+        }
+      }
+
+      // Update OCR text from selected or latest image
+      const ocrBox = document.getElementById("ocrBox");
+      const ocrConfText = document.getElementById("ocrConfText");
+      let activeOcrText = "";
+      let activeConf = 0;
+
+      const activeId = selectedImageId && images[selectedImageId] ? selectedImageId : imageKeys[imageKeys.length - 1];
+      if (activeId && images[activeId] && images[activeId].ocr) {
+        activeOcrText = images[activeId].ocr.text || "";
+        activeConf = images[activeId].ocr.avg_confidence || 0;
+      }
+
+      if (activeOcrText) {
+        ocrBox.innerText = activeOcrText;
+        ocrConfText.innerText = `Conf: ${activeConf}%`;
+      } else {
+        ocrBox.innerText = "No readable declarations detected yet.";
+        ocrConfText.innerText = "Conf: --";
+      }
+
+      // Update Declaration Checklist & Next Step Card dynamically from backend coverage/declarations
+      updateChecklistAndNextStep(sess);
+
+      if (sess.last_evaluation) {
+        renderEvaluationResult(sess.last_evaluation);
+      }
+    }
+
+    function selectSessionPanel(rec, imgId) {
+      document.getElementById("panelStatusBadge").className = rec.accepted ? "badge badge-pass" : "badge badge-fail";
+      document.getElementById("panelStatusBadge").innerText = rec.accepted ? `ACCEPTED (${rec.view_type})` : `REJECTED (${rec.view_type})`;
+
+      const metaBox = document.getElementById("imgMetadataBox");
+      metaBox.style.display = "grid";
+      document.getElementById("metaPanelType").innerText = rec.view_type || "FRONT";
+      document.getElementById("metaSource").innerText = "📱 Field Phone";
+      document.getElementById("metaStatus").innerText = rec.accepted ? "✓ Accepted" : "⚠ Rejected";
+
+      const qMetrics = document.getElementById("qualityMetricsDetails");
+      if (rec.quality) {
+        const m = rec.quality.metrics || {};
+        qMetrics.innerHTML = `<span style="color: var(--success-text); font-weight: 600;">✓ Quality Assessment</span> | Blur: ${m.blur_score || '--'} | Brightness: ${m.brightness || '--'} | Glare: ${m.glare_ratio || '--'}`;
+      }
+
+      if (rec.ocr) {
+        document.getElementById("ocrStateBadge").innerText = rec.ocr.state || "PROCESSED";
+        document.getElementById("ocrStateBadge").className = rec.ocr.state === "DETECTED" ? "badge badge-pass" : "badge badge-warning";
+      }
+
+      // Render selected panel evidence image in Field Evidence Viewport
+      const previewImg = document.getElementById("imagePreview");
+      const scanContainer = document.getElementById("scanContainer");
+      const video = document.getElementById("cameraVideo");
+
+      const rawUrl = rec && (rec.image_url || rec.url || rec.data_url || rec.src || rec.preview_url || rec.image_data || rec.path);
+      let imgSrc = null;
+      if (rawUrl) {
+        imgSrc = (rawUrl.startsWith("http") || rawUrl.startsWith("data:")) ? rawUrl : `${API_BASE}${rawUrl}`;
+      } else if (capturedBlobPending) {
+        imgSrc = URL.createObjectURL(capturedBlobPending);
+      }
+
+      if (imgSrc) {
+        previewImg.src = imgSrc;
+        previewImg.style.objectFit = "contain";
+        scanContainer.style.display = "block";
+        if (video) video.style.display = "none";
+      }
+    }
+
+    function updateProgressStepper(photoCount, images, lastEval) {
+      // Default: Step 1 (Front Photo) active
+      let activeStep = 1;
+      if (photoCount === 1) activeStep = 3; // 1 photo -> Back Photo active
+      else if (photoCount >= 2) activeStep = 4; // 2+ photos -> Measurements active
+      if (lastEval) activeStep = 5; // Evaluated -> Compliance active
+
+      for (let i = 1; i <= 6; i++) {
+        const step = document.getElementById(`step${i}`);
+        const div = document.getElementById(`div${i}`);
+        if (!step) continue;
+
+        if (i < activeStep) {
+          step.className = "step-item completed";
+          if (div) div.className = "step-divider completed";
+        } else if (i === activeStep) {
+          step.className = "step-item active";
+          if (div) div.className = "step-divider active";
+        } else {
+          step.className = "step-item";
+          if (div) div.className = "step-divider";
+        }
+      }
+    }
+
+    function updateChecklistAndNextStep(sess) {
+      const images = sess.images || {};
+      const allImages = Object.values(images).filter(rec => rec);
+      const acceptedImages = allImages.filter(rec => rec.accepted !== false);
+      const hasImages = allImages.length > 0;
+
+      const fields = [
+        { id: "MRP", label: "MRP (incl. of all taxes)" },
+        { id: "NET_QUANTITY", label: "Net Quantity" },
+        { id: "MANUFACTURER", label: "Manufacturer / Packer" },
+        { id: "MFG_DATE", label: "Manufacturing / Packing Date" },
+        { id: "COUNTRY_OF_ORIGIN", label: "Country of Origin" }
+      ];
+
+      const patterns = {
+        NET_QUANTITY: /(?:NET\s*(?:QTY\.?|QUANTITY|WT\.?|WEIGHT|CONTENTS?)|NETW|NETWT|N\.?W\.?)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?\s?(?:g|gm|gram|grams|kg|mg|ml|l|ltr)\b)/i,
+        MRP: /(?:MRP|M\.?R\.?P\.?)[^0-9₹]{0,15}(?:RS\.?|₹|INR)?\s*([0-9]+(?:\.[0-9]{1,2})?)\b(?!\d)/i,
+        MFG_DATE: /(?:MFG|MANUFACTURING|PKD|PACKED)\.?\s*(?:DATE|ON)?\s*[:\-]?\s*([0-3]?[0-9](?:[\/\-\.]|\s*)[A-Z]{3}(?:[\/\-\.]|\s*)[0-9]{2,4}|[0-3]?[0-9][\/\-\.][0-1]?[0-9][\/\-\.][0-9]{2,4})/i,
+        COUNTRY_OF_ORIGIN: /(?:COUNTRY OF ORIGIN|MADE IN)\s*[:\-]?\s*([A-Z ]{3,20})/i,
+        MANUFACTURER: /(?:MANUFACTURED\s*BY|MFD\.?\s*BY|MARKETED\s*BY|PACKED\s*BY)\s*[:\-]?\s*([A-Z][A-Za-z .,&]{3,50}(?:LTD|LIMITED|PVT|LLP|INC)?\.?)/i
+      };
+
+      const foundDeclarations = {}; // fieldId -> { status, panel, value, source }
+
+      // Helper to process an array of images for a target status
+      const processImages = (list, targetStatus) => {
+        list.forEach(rec => {
+          const viewType = rec.view_type || "PANEL";
+
+          // 1. Check structured declarations from backend
+          const decls = rec.declarations || (rec.analysis && rec.analysis.declarations);
+          if (decls) {
+            Object.keys(decls).forEach(fKey => {
+              const fieldId = fKey.toUpperCase();
+              const declItem = decls[fKey];
+              if (declItem && (declItem.state === "FOUND" || declItem.status === "FOUND") && declItem.value) {
+                if (!foundDeclarations[fieldId] || foundDeclarations[fieldId].status !== "FOUND") {
+                  foundDeclarations[fieldId] = {
+                    status: targetStatus,
+                    panel: viewType,
+                    value: declItem.value,
+                    source: declItem.source || "Backend"
+                  };
+                }
+              }
+            });
+          }
+
+          // 2. Check OCR text fallback if structured backend declaration missed it
+          const ocrText = (rec.ocr && rec.ocr.text) || (rec.analysis && rec.analysis.ocr && rec.analysis.ocr.text) || "";
+          if (ocrText) {
+            fields.forEach(field => {
+              const fId = field.id;
+              if (!foundDeclarations[fId] || foundDeclarations[fId].status !== "FOUND") {
+                const regex = patterns[fId];
+                if (regex) {
+                  const match = ocrText.match(regex);
+                  if (match) {
+                    foundDeclarations[fId] = {
+                      status: targetStatus,
+                      panel: viewType,
+                      value: match[1] ? match[1].trim() : match[0].trim(),
+                      source: "OCR"
+                    };
+                  }
+                }
+              }
+            });
+          }
+        });
+      };
+
+      // Pass 1: Accepted images (takes priority, status = FOUND)
+      processImages(acceptedImages, "FOUND");
+
+      // Pass 2: Rejected images (for remaining unverified fields, status = REJECTED_EVIDENCE)
+      const rejectedImages = allImages.filter(rec => rec.accepted === false);
+      processImages(rejectedImages, "REJECTED_EVIDENCE");
+
+      const checklistContainer = document.getElementById("checklistContainer");
+      checklistContainer.innerHTML = "";
+
+      let foundCount = 0;
+      fields.forEach(field => {
+        const decl = foundDeclarations[field.id];
+        let status = "PENDING";
+        let badgeHtml = "";
+
+        if (decl && decl.status === "FOUND") {
+          status = "FOUND";
+          foundCount++;
+          const valTooltip = decl.value ? ` title="Extracted: ${decl.value}"` : '';
+          badgeHtml = `<span class="badge badge-pass"${valTooltip}>✓ Found — ${decl.panel}</span>`;
+        } else if (decl && decl.status === "REJECTED_EVIDENCE") {
+          status = "REJECTED_EVIDENCE";
+          const valTooltip = decl.value ? ` title="Detected in rejected photo: ${decl.value}"` : '';
+          badgeHtml = `<span class="badge badge-warning"${valTooltip}>⚠ Detected (${decl.panel} retake)</span>`;
+        } else if (!hasImages) {
+          status = "PENDING";
+          badgeHtml = `<span class="badge badge-neutral">○ Pending</span>`;
+        } else {
+          // Has images, but this declaration was not detected in captured photos
+          const hasUnclearOcr = allImages.some(r => r.ocr && (r.ocr.state === "UNCLEAR" || (r.ocr.avg_confidence && r.ocr.avg_confidence < 30)));
+          if (hasUnclearOcr) {
+            status = "UNCLEAR";
+            badgeHtml = `<span class="badge badge-warning">? Unclear</span>`;
+          } else {
+            status = "NOT_DETECTED";
+            badgeHtml = `<span class="badge badge-warning">⚠ Not detected</span>`;
+          }
+        }
+
+        const div = document.createElement("div");
+        div.className = "checklist-item";
+        div.innerHTML = `
+          <span class="checklist-label">${field.label}</span>
+          ${badgeHtml}
+        `;
+        checklistContainer.appendChild(div);
+      });
+
+      const covPct = Math.round((foundCount / fields.length) * 100);
+      document.getElementById("coverageBadge").innerText = `${covPct}% Coverage`;
+      document.getElementById("coverageBadge").className = `badge ${covPct === 100 ? 'badge-pass' : covPct > 0 ? 'badge-warning' : 'badge-neutral'}`;
+
+      const nextCard = document.getElementById("nextStepCard");
+      const nextDesc = document.getElementById("nextStepDesc");
+
+      if (!hasImages) {
+        nextCard.style.display = "block";
+        nextDesc.innerText = "Capture the front or back panel of the package to start compliance verification.";
+      } else if (foundCount < fields.length) {
+        nextCard.style.display = "block";
+        nextDesc.innerText = `📸 ${fields.length - foundCount} mandatory declaration(s) unverified by accepted evidence. Capture additional or clearer package panels to complete coverage.`;
+      } else {
+        nextCard.style.display = "block";
+        nextDesc.innerText = "✓ Required declaration evidence collected across session panels. Click Evaluate Compliance Verdict below.";
+      }
+    }
+
+    function renderEvaluationResult(evalData) {
+      const section = document.getElementById("verdictSection");
+      section.style.display = "block";
+
+      const banner = document.getElementById("verdictBanner");
+      const title = document.getElementById("verdictTitle");
+      const badge = document.getElementById("verdictBadge");
+      const reason = document.getElementById("verdictReason");
+      const incompActions = document.getElementById("inconclusiveActions");
+
+      const verdict = evalData.verdict || "INCONCLUSIVE";
+      banner.className = `verdict-banner ${verdict}`;
+      title.innerText = `Compliance Verdict: ${verdict.replace('_', ' ')}`;
+      badge.innerText = verdict;
+
+      if (verdict === "COMPLIANT") {
+        badge.className = "badge badge-compliant";
+        reason.innerText = evalData.verdict_reason || "All mandatory Legal Metrology declaration requirements satisfied.";
+        incompActions.style.display = "none";
+        setStep(6);
+      } else if (verdict === "POTENTIAL_NON_COMPLIANCE") {
+        badge.className = "badge badge-non-compliant";
+        reason.innerText = evalData.verdict_reason || "One or more mandatory requirements appear violated.";
+        incompActions.style.display = "none";
+        setStep(6);
+      } else {
+        badge.className = "badge badge-inconclusive";
+        reason.innerText = "Evidence is insufficient or measurement uncertainty overlaps the applicable threshold. " + (evalData.verdict_reason || "");
+        incompActions.style.display = "flex";
+        setStep(4);
+      }
+
+      const findingsContainer = document.getElementById("findingsContainer");
+      findingsContainer.innerHTML = "";
+      (evalData.findings || []).forEach(f => {
+        const div = document.createElement("div");
+        div.className = `finding-item ${f.status}`;
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+            <strong style="font-size: 0.875rem;">${f.requirement}</strong>
+            <span class="badge ${f.status === 'COMPLIANT' ? 'badge-pass' : (f.status === 'POTENTIAL_NON_COMPLIANCE' ? 'badge-fail' : 'badge-warning')}">${f.status}</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">${f.explanation}</div>
+        `;
+        findingsContainer.appendChild(div);
+      });
+
+      const measDetails = document.getElementById("measurementDetails");
+      const measurements = evalData.measurements || [];
+      if (measurements.length > 0) {
+        const m = measurements[0];
+        measDetails.innerHTML = `
+          <strong>Field:</strong> ${m.field}<br>
+          <strong>Measured Value:</strong> ${m.value} ± ${m.uncertainty} ${m.unit}<br>
+          <strong>Confidence:</strong> ${m.confidence} | <strong>Calibration:</strong> ${m.calibration}
+        `;
+      } else {
+        measDetails.innerText = "Measurement evidence required.";
+      }
+
+      document.getElementById("hashText").innerText = evalData.evidence_hash || "None";
+    }
+
+    function setStep(stepNum) {
+      for (let i = 1; i <= 6; i++) {
+        const step = document.getElementById(`step${i}`);
+        const div = document.getElementById(`div${i}`);
+        if (!step) continue;
+        if (i < stepNum) {
+          step.className = "step-item completed";
+          if (div) div.className = "step-divider completed";
+        } else if (i === stepNum) {
+          step.className = "step-item active";
+          if (div) div.className = "step-divider active";
+        } else {
+          step.className = "step-item";
+          if (div) div.className = "step-divider";
+        }
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toastContainer");
+      document.getElementById("toastText").innerText = msg;
+      toast.style.display = "flex";
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 4000);
+    }
+  </script>
+</body>
 </html>
